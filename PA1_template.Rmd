@@ -1,25 +1,131 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: ""
+output: html_document
 ---
 
+Peer Assignment Number 1
+========================
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up.
+These type of devices are part of the "quantified self" movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks.
 
 
-## What is the average daily activity pattern?
+But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
 
 
+This assignment makes use of data from a personal activity monitoring device.
+This device collects data at 5 minute intervals through out the day.
+The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.The data for this can be downloaded from the web site: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip)
 
-## Imputing missing values
+
+The variables included in this dataset are:
+
+1. steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+
+2. date: The date on which the measurement was taken in YYYY-MM-DD format
+
+3. interval: Identifier for the 5-minute interval in which measurement was taken
+
+We load the data by using:
+```{r}
+setwd('D:/')
+df<-read.csv("activity.csv")
+head(df)
+```
+
+The variable 'date' is of type 'factor'. To convert it to type 'Date', I have used the following code.Also i wanted to convert the variable 'interval' into 'factor' format
+```{r}
+df[,'date']=as.Date(df[,'date'])
+df[,3]<-as.factor(df[,3])
+class(df[,'date'])
+class(df[,'interval'])
+```
+
+Now to get an idea about the total number of steps taken each day we plot a histogram
+```{r}
+hist(tapply(df[,'steps'],df[,'date'],sum),breaks=61,main='Histogram of number of Steps in each day',xlab="No. of Steps")
+```
+
+To calculate the mean of number of steps taken each day,we use
+```{r}
+tapply(df[,'steps'],df[,'date'],mean)
+```
+
+To calculate the median of number of steps taken each day,we use
+```{r}
+tapply(df[,'steps'],df[,'date'],median)
+```
+
+To calculate The Mean of Steps taken I used a plot. In the first statement i wanted to remove all the rows with missing values.
+```{r}
+df1<-df[complete.cases(df),]
+plot(levels(df1[,3]),tapply(df1[,1],df1[,3],mean),type='l',xlab='5 Minute Interval',ylab='Mean of steps taken',main="Daily activity pattern")
+```
+
+To calculate The Maximum Mean of Steps taken 
+```{r}
+s<-which.max(tapply(df1[,1],df1[,3],mean))
+tapply(df1[,1],df1[,3],mean)[s]
+```
+
+To calculate Number of Missing values
+```{r}
+sum(!complete.cases(df))
+```
+
+We replace the missing value by taking mean of values from the 'interval' variable they belong to
+```{r}
+library(zoo)
+df2<-df
+df2[,1]<-na.aggregate(df2[,1],df2[,3])
+head(df2)
+```
 
 
+Now to get an idea about the total number of steps taken each day we plot a histogram
+```{r}
+hist(tapply(df2[,'steps'],df2[,'date'],sum),breaks=61,main='Histogram of number of Steps in each day',xlab="No. of Steps")
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+To calculate the mean of the steps taken each day
+```{r}
+tapply(df2[,'steps'],df2[,'date'],mean)
+```
+
+To calculate the median of the steps taken each day
+```{r}
+tapply(df2[,'steps'],df2[,'date'],median)
+```
+
+To make weekends factor
+```{r}
+p<-function(x,l=c())
+{
+        s=c('Saturday','Sunday')
+        if(x %in% s)
+        {
+            x='Weekend'    
+        }
+        else
+            x='weekday'
+        x
+}
+
+mop<-weekdays(df[,2])
+d<-lapply(mop,p)
+vec<-vector()
+df2['Days']<-sapply(d,append,vec)
+df2[,'Days']<-as.factor(df2[,'Days'])
+head(df2)
+```
+
+A panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r}
+library(data.table)
+library(lattice)
+DT <- data.table(df2)
+DS<-DT[,mean(steps),by=list(interval,Days)]
+at <- seq(1, nrow(DS), length.out=10)
+labels <- round(seq(5, 2355, length.out=10))
+xyplot(V1~interval|Days,data=DS,layout=c(1,2),type='l',xlab='Time interval',ylab='Number of steps',main='5-minute interval and the average number of steps taken',scales=list(x=list(at=at, labels=labels, rot=90)))
+```
